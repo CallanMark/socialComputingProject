@@ -3,10 +3,11 @@ import torch.nn.functional as F
 from torch.nn import Linear, ModuleList, ReLU, Sequential
 from typing import Callable, Dict, List, Optional, Tuple, Union, Final
 
-from torch_geometric.nn import GATConv, GATv2Conv, HANConv, global_add_pool, global_mean_pool, global_max_pool
+from torch_geometric.nn import GATConv, GATv2Conv, HANConv, RGCNConv, global_add_pool, global_mean_pool, global_max_pool
 from torch_geometric.nn.models.basic_gnn import BasicGNN
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.typing import Adj, OptTensor
+
 
 class GATForGraphClassification(BasicGNN):
     def __init__(
@@ -168,6 +169,85 @@ class HANForGraphClassification(torch.nn.Module):
         # Apply linear layer and classifier
         x = self.lin(x)
         x = F.relu(x)
+        x = F.dropout(x, p=0.5, training=self.training)
+        x = self.classifier(x)
+        
+        return x
+    
+
+class RGCNForGraphClassification(torch.nn.Module):
+    """
+    Graph classification model based on Relational Graph Convolutional Networks (RGCN).
+    
+    This model uses RGCN layers to process graphs with multiple relation types,
+    followed by global pooling to create graph-level representations for classification.
+    
+    Args:
+        in_channels (int): Number of input features for each node.
+        hidden_channels (int): Number of hidden features.
+        out_channels (int): Number of output classes.
+        num_relations (int): Number of different relation/edge types.
+        num_bases (int, optional): If set, this layer will use the basis-decomposition
+            regularization scheme where num_bases denotes the number of bases to use.
+            This helps reduce the number of parameters. Defaults to None.
+    
+    Example:
+        >>> model = RGCNForGraphClassification(
+        ...     in_channels=768,
+        ...     hidden_channels=128,
+        ...     out_channels=2,
+        ...     num_relations=2,
+        ...     num_bases=4
+        ... )
+    """
+    def __init__(self, in_channels, hidden_channels, out_channels, num_relations, num_bases=None):
+        super(RGCNForGraphClassification, self).__init__()
+        
+        # First RGCN convolution layer
+        self.conv1 = RGCNConv(
+            in_channels=in_channels,
+            out_channels=hidden_channels,
+            num_relations=num_relations,
+            num_bases=num_bases
+        )
+        
+        # Second RGCN convolution layer
+        self.conv2 = RGCNConv(
+            in_channels=hidden_channels,
+            out_channels=hidden_channels,
+            num_relations=num_relations,
+            num_bases=num_bases
+        )
+        
+        # Output layer
+        self.classifier = Linear(hidden_channels, out_channels)
+    
+    def forward(self, x, edge_index, edge_type, batch):
+        """
+        Forward pass for graph classification.
+        
+        Args:
+            x (torch.Tensor): Node feature matrix [num_nodes, in_channels].
+            edge_index (torch.Tensor): Edge indices [2, num_edges].
+            edge_type (torch.Tensor): Edge type/relation indices [num_edges].
+            batch (torch.Tensor): Batch vector [num_nodes] mapping each node to its graph.
+            
+        Returns:
+            torch.Tensor: Graph classification predictions [batch_size, out_channels].
+        """
+        # First layer with ReLU activation
+        x = self.conv1(x, edge_index, edge_type)
+        x = F.relu(x)
+        x = F.dropout(x, p=0.5, training=self.training)
+        
+        # Second layer
+        x = self.conv2(x, edge_index, edge_type)
+        x = F.relu(x)
+        
+        # Global pooling (from node-level to graph-level representation)
+        x = global_mean_pool(x, batch)
+        
+        # Apply final classifier
         x = F.dropout(x, p=0.5, training=self.training)
         x = self.classifier(x)
         

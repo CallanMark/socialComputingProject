@@ -116,3 +116,36 @@ def convert_to_heterogeneous(homogeneous_dataset, source_node_idx=0, add_source_
     ]
     
     return hetero_dataset
+
+def get_edge_type(edge_index, source_indices=[0]):
+    """
+    Generate edge type tensor based on source node indices.
+    
+    This function creates a tensor of edge types by assigning different types to edges
+    based on whether the source node is in the specified list of source indices.
+    
+    Args:
+        edge_index (torch.Tensor): The edge index tensor of shape [2, num_edges]
+            where edge_index[0] contains source nodes and edge_index[1] contains 
+            target nodes.
+        source_indices (list, optional): List of node indices to be considered as 
+            source nodes. Edges originating from these nodes will be assigned type 0,
+            while all other edges will be assigned type 1. Defaults to [0].
+    
+    Returns:
+        torch.Tensor: A tensor of shape [num_edges] containing the edge types.
+            Edges from nodes in source_indices have type 0, others have type 1.
+    
+    Example:
+        >>> edge_index = torch.tensor([[0, 1, 2, 0], [1, 2, 3, 3]])
+        >>> edge_type = get_edge_type(edge_index, source_indices=[0])
+        >>> print(edge_type)
+        tensor([0, 1, 1, 0])
+    """
+    edge_type = []
+    for src, tgt in edge_index.t().tolist():
+        if src in source_indices:
+            edge_type.append(0)
+        else:
+            edge_type.append(1)
+    return torch.tensor(edge_type)
