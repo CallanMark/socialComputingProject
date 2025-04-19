@@ -8,6 +8,7 @@ from torch_geometric.nn.models.basic_gnn import BasicGNN
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.typing import Adj, OptTensor
 
+from utils import get_edge_type
 #######################
 # GAT (Graph Attention Network) Models
 #######################
@@ -505,8 +506,8 @@ class EnsembleGraphClassifier(torch.nn.Module):
         Forward pass for ensemble graph classification.
         """
         if self.ensemble_method == 'voting':
-            # Get predictions from each model and vote
-            all_preds = []
+            # Get logits from each model
+            all_logits = []
             for model in self.models:
                 if hasattr(model, 'forward_data'):
                     # Use specialized data handling if available
@@ -518,17 +519,37 @@ class EnsembleGraphClassifier(torch.nn.Module):
                     elif isinstance(model, HANForGraphClassification):
                         logits = model(data.x_dict, data.edge_index_dict, data.batch)
                     elif isinstance(model, RGCNForGraphClassification):
-                        logits = model(data.x, data.edge_index, data.edge_type, data.batch)
+                        # Generate edge_type if not present
+                        if not hasattr(data, 'edge_type'):
+                            edge_type = get_edge_type(data.edge_index, 
+                                    source_indices=data.ptr[:-1].tolist() if hasattr(data, 'ptr') else [0])
+                        else:
+                            edge_type = data.edge_type
+                        logits = model(data.x, data.edge_index, edge_type, data.batch)
                     else:
                         raise TypeError(f"Unsupported model type: {type(model)}")
                 
-                preds = torch.argmax(logits, dim=1)
-                all_preds.append(preds)
+                all_logits.append(logits)
             
-            # Stack predictions and take mode along model dimension
-            all_preds = torch.stack(all_preds, dim=0)
-            final_preds = torch.mode(all_preds, dim=0).values
-            return final_preds
+            # For training, we need to return logits, not predictions
+            # Average the logits from all models
+            if self.training:
+                all_logits_stacked = torch.stack(all_logits, dim=0)
+                return torch.mean(all_logits_stacked, dim=0)
+            else:
+                # For evaluation/inference, we can do voting on the predicted classes
+                all_preds = [torch.argmax(logit, dim=1) for logit in all_logits]
+                all_preds = torch.stack(all_preds, dim=0)
+                # Get the most common prediction (mode) for each sample
+                final_preds_values, _ = torch.mode(all_preds, dim=0)
+                
+                # Convert predictions back to one-hot format for consistency
+                batch_size = final_preds_values.size(0)
+                final_logits = torch.zeros(batch_size, self.num_classes, device=data.x.device)
+                for i in range(batch_size):
+                    final_logits[i, final_preds_values[i]] = 1.0
+                
+                return final_logits
             
         elif self.ensemble_method == 'average':
             # Average logits from all models
@@ -544,7 +565,13 @@ class EnsembleGraphClassifier(torch.nn.Module):
                     elif isinstance(model, HANForGraphClassification):
                         logits = model(data.x_dict, data.edge_index_dict, data.batch)
                     elif isinstance(model, RGCNForGraphClassification):
-                        logits = model(data.x, data.edge_index, data.edge_type, data.batch)
+                        # Generate edge_type if not present
+                        if not hasattr(data, 'edge_type'):
+                            edge_type = get_edge_type(data.edge_index, 
+                                    source_indices=data.ptr[:-1].tolist() if hasattr(data, 'ptr') else [0])
+                        else:
+                            edge_type = data.edge_type
+                        logits = model(data.x, data.edge_index, edge_type, data.batch)
                     else:
                         raise TypeError(f"Unsupported model type: {type(model)}")
                 
@@ -569,7 +596,13 @@ class EnsembleGraphClassifier(torch.nn.Module):
                     elif isinstance(model, HANForGraphClassification):
                         embed = model.get_embedding(data.x_dict, data.edge_index_dict, data.batch)
                     elif isinstance(model, RGCNForGraphClassification):
-                        embed = model.get_embedding(data.x, data.edge_index, data.edge_type, data.batch)
+                        # Generate edge_type if not present
+                        if not hasattr(data, 'edge_type'):
+                            edge_type = get_edge_type(data.edge_index, 
+                                    source_indices=data.ptr[:-1].tolist() if hasattr(data, 'ptr') else [0])
+                        else:
+                            edge_type = data.edge_type
+                        embed = model.get_embedding(data.x, data.edge_index, edge_type, data.batch)
                     else:
                         raise TypeError(f"Unsupported model type: {type(model)}")
                 
