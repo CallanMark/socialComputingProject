@@ -176,3 +176,5 @@ cython_debug/
 
 # notebook cache
 /notebooks/data/*
+/data
+/models
