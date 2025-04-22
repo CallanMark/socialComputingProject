@@ -202,7 +202,7 @@ def create_model(args, num_features, device, metadata=None):
                         out_channels=args.hidden_dim,
                         num_classes=2,
                         heads=args.heads,
-                        metadata=metadata,
+                        metadata=(['source', 'user'], [('source', 'to', 'user'), ('user', 'to', 'user')]),
                         dropout=args.dropout,
                         num_layers=args.num_layers
                     ))

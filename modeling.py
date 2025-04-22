@@ -7,8 +7,9 @@ from torch_geometric.nn import GATConv, GATv2Conv, HANConv, RGCNConv, global_add
 from torch_geometric.nn.models.basic_gnn import BasicGNN
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.typing import Adj, OptTensor
+from torch_geometric.data import HeteroData, Batch
 
-from utils import get_edge_type
+from utils import get_edge_type, convert_to_heterogeneous
 #######################
 # GAT (Graph Attention Network) Models
 #######################
@@ -298,7 +299,7 @@ class HANForGraphClassification(torch.nn.Module):
         Get graph-level embeddings for use in classification or ensemble methods.
         """
         # Get node embeddings from the base HAN model
-        node_embeddings_dict = self.han(x_dict, edge_index_dict)
+        node_embeddings_dict = self.han_conv(x_dict, edge_index_dict)
         
         # Average pooling for each node type
         pooled_embeddings = []
@@ -517,7 +518,14 @@ class EnsembleGraphClassifier(torch.nn.Module):
                     if isinstance(model, GATForGraphClassification):
                         logits = model(data.x, data.edge_index, data.batch, getattr(data, 'edge_attr', None))
                     elif isinstance(model, HANForGraphClassification):
-                        logits = model(data.x_dict, data.edge_index_dict, data.batch)
+                        if not isinstance(data, HeteroData):
+                            data_list = Batch.to_data_list(data)
+                            data_list = convert_to_heterogeneous(data_list)
+                            heter_data = Batch.from_data_list(data_list)
+                        else:
+                            heter_data = data
+                        heter_data.to(data.x.device)
+                        logits = model(heter_data.x_dict, heter_data.edge_index_dict)
                     elif isinstance(model, RGCNForGraphClassification):
                         # Generate edge_type if not present
                         if not hasattr(data, 'edge_type'):
@@ -563,7 +571,14 @@ class EnsembleGraphClassifier(torch.nn.Module):
                     if isinstance(model, GATForGraphClassification):
                         logits = model(data.x, data.edge_index, data.batch, getattr(data, 'edge_attr', None))
                     elif isinstance(model, HANForGraphClassification):
-                        logits = model(data.x_dict, data.edge_index_dict, data.batch)
+                        if not isinstance(data, HeteroData):
+                            data_list = Batch.to_data_list(data)
+                            data_list = convert_to_heterogeneous(data_list)
+                            heter_data = Batch.from_data_list(data_list)
+                        else:
+                            heter_data = data
+                        heter_data.to(data.x.device)
+                        logits = model(heter_data.x_dict, heter_data.edge_index_dict)
                     elif isinstance(model, RGCNForGraphClassification):
                         # Generate edge_type if not present
                         if not hasattr(data, 'edge_type'):
@@ -594,7 +609,14 @@ class EnsembleGraphClassifier(torch.nn.Module):
                     if isinstance(model, GATForGraphClassification):
                         embed = model.get_embedding(data.x, data.edge_index, data.batch, getattr(data, 'edge_attr', None))
                     elif isinstance(model, HANForGraphClassification):
-                        embed = model.get_embedding(data.x_dict, data.edge_index_dict, data.batch)
+                        if not isinstance(data, HeteroData):
+                            data_list = Batch.to_data_list(data)
+                            data_list = convert_to_heterogeneous(data_list)
+                            heter_data = Batch.from_data_list(data_list)
+                        else:
+                            heter_data = data
+                        heter_data.to(data.x.device)
+                        logits = model(heter_data.x_dict, heter_data.edge_index_dict)
                     elif isinstance(model, RGCNForGraphClassification):
                         # Generate edge_type if not present
                         if not hasattr(data, 'edge_type'):

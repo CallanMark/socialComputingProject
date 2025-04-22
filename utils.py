@@ -2,7 +2,7 @@ import torch
 from torch_geometric.data import HeteroData, Data
 from typing import List, Union
 
-def convert_single_graph(homogeneous_graph: Data, source_node_idx: int = 0, add_source_self_loop: bool = False) -> HeteroData:
+def convert_single_graph(homogeneous_graph: Data, source_node_idx: int = 0, add_source_self_loop: bool = True) -> HeteroData:
     """
     Convert a single homogeneous graph to a heterogeneous graph with two node types:
     - 'source': News source node
@@ -78,6 +78,7 @@ def convert_single_graph(homogeneous_graph: Data, source_node_idx: int = 0, add_
         hetero_graph['source', 'to', 'user'].edge_index = torch.tensor(
             [src_indices, dst_indices], dtype=torch.long
         )
+        
     
     if user_to_user_edges:
         src_indices, dst_indices = zip(*user_to_user_edges)
@@ -97,7 +98,7 @@ def convert_single_graph(homogeneous_graph: Data, source_node_idx: int = 0, add_
     
     return hetero_graph
 
-def convert_to_heterogeneous(homogeneous_dataset, source_node_idx=0, add_source_self_loop=False):
+def convert_to_heterogeneous(homogeneous_dataset, source_node_idx=0, add_source_self_loop=True):
     """
     Convert a homogeneous UPFD dataset to a heterogeneous dataset.
     
@@ -149,3 +150,14 @@ def get_edge_type(edge_index, source_indices=[0]):
         else:
             edge_type.append(1)
     return torch.tensor(edge_type)
+
+from torch_geometric.data import Batch
+def to_hetero_batch(batch, add_source_self_loop=True):
+    data_list = batch.to_data_list()
+    data_list = convert_to_heterogeneous(data_list, 0, add_source_self_loop)
+    for data in data_list:
+        print(data)
+    
+    batch = Batch.from_data_list(data_list)
+    
+    return batch
