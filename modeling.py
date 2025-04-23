@@ -307,7 +307,7 @@ class HANForGraphClassification(torch.nn.Module):
         
         # Apply linear layer
         x = self.lin(x)
-        x = F.relu(x)
+        x = F.leaky_relu(x)
         
         return x
 

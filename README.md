@@ -1,21 +1,184 @@
-# Fake News Detection using Graph Neural Networks
+# Fake News Detection using Graph Neural Network Ensembles
 
-This repository contains code for detecting fake news using graph neural networks, where news articles and user interactions are modeled as graphs.
+This repository implements an ensemble approach to fake news detection using multiple graph neural networks. The ensemble methods combine different GNN architectures to achieve improved detection performance on news article graphs.
 
 ## Installation
 
-### Required packages
-Install PyTorch <= 2.5: https://pytorch.org/get-started/previous-versions/  
-Install PyG: https://pytorch-geometric.readthedocs.io/en/latest/install/installation.
+### 1. Create and activate conda environment
+```bash
+# Create new conda environment with Python 3.10
+conda create -n sc python=3.10
+conda activate sc
+```
+install conda: https://www.anaconda.com/docs/getting-started/miniconda/install#linux
 
-## Models
+### 2. Install PyTorch
+Choose one of the following methods:
 
-The repository implements several graph neural network architectures:
+#### Using conda (recommended):
+```bash
+conda install pytorch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 pytorch-cuda=12.4 -c pytorch -c nvidia
+```
 
-- **GAT (Graph Attention Network)**: Utilizes attention mechanisms to weigh the importance of node relationships.
-- **HAN (Heterogeneous Graph Attention Network)**: Extends GAT to heterogeneous graphs with different node and edge types.
-- **RGCN (Relational Graph Convolutional Network)**: Handles different types of relationships between nodes.
-- **Ensemble**: Combines multiple models for improved performance.
+#### Using pip:
+```bash
+pip install torch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 --index-url https://download.pytorch.org/whl/cu124
+```
+
+### 3. Install PyTorch Geometric (PyG)
+```bash
+pip install torch_geometric
+```
+
+You can also visits PyTorch and PyG's sites for other installation options:  
+- PyTorch: https://pytorch.org/get-started/locally/
+- PyG: https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html
+
+## Ensemble Methods
+
+The project implements four ensemble strategies that combine GAT, HAN, and RGCN models:
+
+### 1. Voting Ensemble
+
+Takes predictions from each model and selects the most common prediction (majority vote) for each graph.
+
+```bash
+python train.py --model_type Ensemble --dataset [politifact|gossipcop] \
+  --ensemble_models GAT,HAN,RGCN \
+  --ensemble_method voting \
+  --hidden_dim 128 \
+  --epochs 100 \
+  --batch_size 32 \
+  --lr 0.005 \
+  --dropout 0.5 \
+  --weight_decay 5e-4 \
+  --num_layers 2
+```
+
+### 2. Average Ensemble
+
+Combines raw prediction logits (pre-softmax values) from each model by averaging them.
+
+```bash
+python train.py --model_type Ensemble --dataset [politifact|gossipcop] \
+  --ensemble_models GAT,HAN,RGCN \
+  --ensemble_method average \
+  --hidden_dim 128 \
+  --epochs 100 \
+  --batch_size 32 \
+  --lr 0.005 \
+  --dropout 0.5 \
+  --weight_decay 5e-4 \
+  --num_layers 2
+```
+
+### 3. Concatenation Ensemble
+
+Extracts graph embeddings from each model, concatenates them, and applies a final classification layer.
+
+```bash
+python train.py --model_type Ensemble --dataset [politifact|gossipcop] \
+  --ensemble_models GAT,HAN,RGCN \
+  --ensemble_method concat \
+  --hidden_dim 128 \
+  --epochs 150 \
+  --batch_size 32 \
+  --lr 0.005 \
+  --dropout 0.6 \
+  --weight_decay 5e-4 \
+  --num_layers 2
+```
+
+### 4. Transform Ensemble
+
+Concatenates embeddings, applies a transformation to a fixed hidden dimension, then makes the final prediction.
+
+```bash
+python train.py --model_type Ensemble --dataset [politifact|gossipcop] \
+  --ensemble_models GAT,HAN,RGCN \
+  --ensemble_method transform \
+  --hidden_dim 256 \
+  --epochs 150 \
+  --batch_size 32 \
+  --lr 0.001 \
+  --dropout 0.5 \
+  --weight_decay 5e-4 \
+  --num_layers 2
+```
+
+### Ensemble Parameters
+- `--dataset`: Can be `gossipcop` or `politifact`
+- `--ensemble_models`: Comma-separated list of models to combine (GAT, HAN, RGCN)
+- `--ensemble_method`: Combination strategy (voting, average, concat, transform)
+- `--hidden_dim`: Dimension of hidden layers/embeddings (default: 128)
+- `--epochs`: Number of training epochs (default: 100)
+- `--batch_size`: Training batch size (default: 32)
+- `--lr`: Learning rate (default: 0.005)
+- `--dropout`: Dropout rate for regularization (default: 0.5)
+- `--weight_decay`: L2 regularization parameter (default: 5e-4)
+- `--num_layers`: Number of layers in each base model (default: 2)
+
+## Base Models
+
+The ensemble combines three different graph neural network architectures:
+
+### GAT (Graph Attention Network)
+
+```bash
+python train.py --model_type GAT --dataset [politifact|gossipcop] \
+  --hidden_dim 128 \
+  --epochs 100 \
+  --batch_size 32 \
+  --lr 0.005 \
+  --dropout 0.5 \
+  --weight_decay 5e-4 \
+  --heads 8 \
+  --num_layers 2 \
+  --pooling mean
+```
+
+Additional parameters:
+- `--heads`: Number of attention heads (default: 8)
+- `--num_layers`: Number of GAT layers (default: 2)
+- `--pooling`: Node feature aggregation method (mean, max, add)
+
+### HAN (Heterogeneous Graph Attention Network)
+
+```bash
+python train.py --model_type HAN --dataset [politifact|gossipcop] \
+  --hidden_dim 128 \
+  --epochs 100 \
+  --batch_size 32 \
+  --lr 0.005 \
+  --dropout 0.6 \
+  --weight_decay 5e-4 \
+  --heads 8 \
+  --num_layers 2 \
+  --use_self_loops
+```
+
+Additional parameters:
+- `--heads`: Number of attention heads (default: 8)
+- `--num_layers`: Number of transformation layers (default: 2)
+- `--use_self_loops`: Add self-loops to source nodes
+
+### RGCN (Relational Graph Convolutional Network)
+
+```bash
+python train.py --model_type RGCN --dataset [politifact|gossipcop] \
+  --hidden_dim 128 \
+  --epochs 100 \
+  --batch_size 32 \
+  --lr 0.005 \
+  --dropout 0.5 \
+  --weight_decay 5e-4 \
+  --num_layers 2 \
+  --pooling mean
+```
+
+Additional parameters:
+- `--num_layers`: Number of RGCN layers (default: 2)
+- `--pooling`: Node feature aggregation method (mean, max, add)
 
 ## Datasets
 
@@ -24,131 +187,28 @@ The code works with the UPFD (User-Publication-Fake-Detection) datasets:
 - **PolitiFact**: News articles from PolitiFact with user engagements
 - **GossipCop**: News articles from GossipCop with user engagements
 
-## Running the Training Script
-
-The `train.py` script allows you to train different graph neural network models for fake news detection.
-
-### Basic Usage
-
-```bash
-python train.py --model_type MODEL --dataset DATASET [OPTIONS]
-```
-
-Where:
-- `MODEL` is one of: GAT, HAN, RGCN, or Ensemble
-- `DATASET` is one of: politifact, gossipcop
-
-## Ensemble Training
-
-Ensemble models combine multiple graph neural networks to improve prediction accuracy. Several combination methods are supported:
-
-### 1. Voting Ensemble
-
-The **voting** method takes predictions from each model and selects the most common prediction (majority vote) for each graph.
-
-```bash
-python train.py --model_type Ensemble --dataset politifact --ensemble_models GAT,HAN,RGCN --ensemble_method voting --hidden_dim 128 --epochs 100 --batch_size 32 --dropout 0.5
-```
-
-### 2. Average Ensemble
-
-The **average** method combines the raw prediction logits (pre-softmax values) from each model by averaging them.
-
-```bash
-python train.py --model_type Ensemble --dataset politifact --ensemble_models GAT,HAN,RGCN --ensemble_method average --hidden_dim 128 --epochs 100 --lr 0.005 --dropout 0.5
-```
-
-### 3. Concatenation Ensemble
-
-The **concat** method extracts graph embeddings from each model, concatenates them, and applies a final classification layer.
-
-```bash
-python train.py --model_type Ensemble --dataset politifact --ensemble_models GAT,HAN,RGCN --ensemble_method concat --hidden_dim 128 --epochs 150 --weight_decay 1e-4 --dropout 0.6
-```
-
-### 4. Transform Ensemble
-
-The **transform** method concatenates embeddings, applies a transformation to a fixed hidden dimension, then makes the final prediction.
-
-```bash
-python train.py --model_type Ensemble --dataset politifact --ensemble_models GAT,HAN,RGCN --ensemble_method transform --hidden_dim 256 --epochs 150 --lr 0.001 --dropout 0.5
-```
-
-## Individual Model Options
-
-### GAT (Graph Attention Network)
-
-GAT uses attention mechanisms to weigh neighboring nodes differently based on their features:
-
-```bash
-python train.py --model_type GAT --dataset politifact --hidden_dim 128 --heads 8 --num_layers 2 --dropout 0.5 --pooling mean --epochs 100 --batch_size 32
-```
-
-Key parameters:
-- `--heads`: Number of attention heads (default: 8)
-- `--num_layers`: Number of GAT layers (default: 2)
-- `--pooling`: Method to convert node features to graph features (`mean`, `max`, or `add`)
-- `--dropout`: Dropout rate for regularization (default: 0.5)
-
-### HAN (Heterogeneous Graph Attention Network)
-
-HAN extends GAT to handle heterogeneous graphs with different node and edge types:
-
-```bash
-python train.py --model_type HAN --dataset politifact --hidden_dim 128 --heads 8 --dropout 0.6 --use_self_loops --epochs 100
-```
-
-Key parameters:
-- `--heads`: Number of attention heads (default: 8)
-- `--use_self_loops`: Add self-loops to source nodes
-- `--dropout`: Dropout rate for regularization (default: 0.6)
-
-Note: HAN always uses batch_size=1 because of how heterogeneous graphs are batched.
-
-### RGCN (Relational Graph Convolutional Network)
-
-RGCN handles different types of relationships between nodes:
-
-```bash
-python train.py --model_type RGCN --dataset politifact --hidden_dim 128 --num_layers 2 --dropout 0.5 --pooling mean --epochs 100 --batch_size 32
-```
-
-Key parameters:
-- `--num_layers`: Number of RGCN layers (default: 2)
-- `--pooling`: Method to convert node features to graph features (`mean`, `max`, or `add`)
-- `--dropout`: Dropout rate for regularization (default: 0.5)
-
-## Common Training Options
-
-These options apply to all model types:
-
-- `--hidden_dim`: Dimensionality of hidden layers (default: 128)
-- `--lr`: Learning rate (default: 0.005)
-- `--epochs`: Number of training epochs (default: 100)
-- `--batch_size`: Batch size for training (default: 32)
-- `--weight_decay`: L2 regularization parameter (default: 5e-4)
-- `--seed`: Random seed for reproducibility (default: 42)
-- `--save_path`: Directory to save model and results (default: './runs')
-
-Example with all options:
-
-```bash
-python train.py --model_type GAT --dataset politifact \
-  --hidden_dim 256 --heads 8 --num_layers 3 \
-  --dropout 0.6 --pooling max \
-  --lr 0.001 --epochs 200 --batch_size 64 \
-  --weight_decay 1e-5 --seed 123 \
-  --save_path ./custom_runs
-```
+Each dataset represents news articles as heterogeneous graphs containing:
+- News source nodes with article content
+- User nodes with interaction history
+- Edges representing user engagement patterns
 
 ## Output
 
-The script creates a timestamped directory for each run under the specified `save_path` (default: `./runs`). This directory contains:
+The script creates a timestamped directory for each run under `./runs` containing:
 
-- `best_model.pt`: The model with the highest validation accuracy
+- `best_model.pt`: Model with highest validation accuracy
 - `training_history.json`: Detailed training metrics and configuration
 - `summary.json`: Key results and configuration summary
 - `training.log`: Full training log
+
+## Additional Parameters
+
+Common parameters available for all models:
+```bash
+--save_path   Directory to save model and results (default: './runs')
+--seed        Random seed for reproducibility (default: 42)
+--device      Device to use (cuda or cpu)
+```
 
 ## Acknowledgements
 This project contains modified code from [PyTorch Geometric (PyG)](https://github.com/pyg-team/pytorch_geometric).
