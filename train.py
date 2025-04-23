@@ -18,7 +18,7 @@ from modeling import (
     RGCNForGraphClassification,
     EnsembleGraphClassifier
 )
-from utils import convert_to_heterogeneous, get_edge_type
+from utils import convert_to_heterogeneous, get_edge_type, to_hetero_batch
 
 # Set up logging
 logging.basicConfig(
@@ -202,7 +202,7 @@ def create_model(args, num_features, device, metadata=None):
                         out_channels=args.hidden_dim,
                         num_classes=2,
                         heads=args.heads,
-                        metadata=metadata,
+                        metadata=(['source', 'user'], [('source', 'to', 'user'), ('user', 'to', 'user'), ('source', 'to', 'source')]),
                         dropout=args.dropout,
                         num_layers=args.num_layers
                     ))
