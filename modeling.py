@@ -9,7 +9,7 @@ from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.typing import Adj, OptTensor
 from torch_geometric.data import HeteroData, Batch
 
-from utils import get_edge_type, convert_to_heterogeneous
+from utils import get_edge_type, convert_to_heterogeneous, to_hetero_batch
 #######################
 # GAT (Graph Attention Network) Models
 #######################
@@ -264,31 +264,8 @@ class HANForGraphClassification(torch.nn.Module):
         Forward pass for heterogeneous graph classification.
         """
         # Get node embeddings from HANConv (this line needs to match your initialization)
-        node_embeddings_dict = self.han_conv(x_dict, edge_index_dict)
+        x = self.get_embedding(x_dict, edge_index_dict, batch)
         
-        # Average pooling for each node type
-        pooled_embeddings = []
-        
-        for node_type, embeddings in node_embeddings_dict.items():
-            if embeddings is not None:
-                # Average pooling for nodes of the same type
-                pooled = torch.mean(embeddings, dim=0)
-                pooled_embeddings.append(pooled)
-        
-        if not pooled_embeddings:
-            raise ValueError("No node embeddings were produced by the model")
-        
-        # Concatenate all pooled embeddings from different node types
-        x = torch.cat(pooled_embeddings)
-        
-        # Initialize the linear layer if not done yet
-        if self.lin is None:
-            lin_input_dim = x.size(0)
-            self.lin = torch.nn.Linear(lin_input_dim, self.out_channels).to(x.device)
-        
-        # Apply linear layer and classifier
-        x = self.lin(x)
-        x = F.relu(x)
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.classifier(x)
         
@@ -302,23 +279,30 @@ class HANForGraphClassification(torch.nn.Module):
         node_embeddings_dict = self.han_conv(x_dict, edge_index_dict)
         
         # Average pooling for each node type
-        pooled_embeddings = []
-        
+        pooled_embeddings = {}
+        if batch is None:
+            # If no batch is provided, assume a single graph
+            batch = {node_type: torch.zeros(embeddings.size(0), dtype=torch.long, device=embeddings.device)
+                     for node_type, embeddings in node_embeddings_dict.items() if embeddings is not None}
         for node_type, embeddings in node_embeddings_dict.items():
             if embeddings is not None:
                 # Average pooling for nodes of the same type
-                pooled = torch.mean(embeddings, dim=0)
-                pooled_embeddings.append(pooled)
+                pooled = global_mean_pool(embeddings, batch[node_type])
+                pooled_embeddings.setdefault(node_type, []).append(pooled)
         
         if not pooled_embeddings:
             raise ValueError("No node embeddings were produced by the model")
         
+        embeddings_by_batch = []
+        for source, user in zip(pooled_embeddings['source'], pooled_embeddings['user']):
+            embeddings_by_batch += (source + user) / 2
         # Concatenate all pooled embeddings from different node types
-        x = torch.cat(pooled_embeddings)
-        
+        # for i,  embed in enumerate(embeddings_by_batch):
+            # print(f"embed at {i}: {embed.shape}")
+        x = torch.stack(embeddings_by_batch, dim=0)
         # Initialize the linear layer if not done yet
         if self.lin is None:
-            lin_input_dim = x.size(0)
+            lin_input_dim = x.size(1)
             self.lin = torch.nn.Linear(lin_input_dim, self.out_channels).to(x.device)
         
         # Apply linear layer
@@ -326,6 +310,7 @@ class HANForGraphClassification(torch.nn.Module):
         x = F.relu(x)
         
         return x
+
 
 
 #######################
@@ -517,15 +502,13 @@ class EnsembleGraphClassifier(torch.nn.Module):
                     # Extract appropriate inputs based on model type
                     if isinstance(model, GATForGraphClassification):
                         logits = model(data.x, data.edge_index, data.batch, getattr(data, 'edge_attr', None))
+                        # print(f"Logits shape from GAT model: {logits.shape}")
                     elif isinstance(model, HANForGraphClassification):
-                        if not isinstance(data, HeteroData):
-                            data_list = Batch.to_data_list(data)
-                            data_list = convert_to_heterogeneous(data_list)
-                            heter_data = Batch.from_data_list(data_list)
-                        else:
-                            heter_data = data
-                        heter_data.to(data.x.device)
-                        logits = model(heter_data.x_dict, heter_data.edge_index_dict)
+                        # print(f"data: {data}")
+                        heter_data = to_hetero_batch(data)
+                        # print(f"Heterogeneous data: {heter_data}")
+                        logits = model(heter_data.x_dict, heter_data.edge_index_dict, batch=heter_data.batch)
+                        # print(f"Logits shape from HAN model: {logits.shape}")
                     elif isinstance(model, RGCNForGraphClassification):
                         # Generate edge_type if not present
                         if not hasattr(data, 'edge_type'):
@@ -534,6 +517,7 @@ class EnsembleGraphClassifier(torch.nn.Module):
                         else:
                             edge_type = data.edge_type
                         logits = model(data.x, data.edge_index, edge_type, data.batch)
+                        # print(f"Logits shape from RGCN model: {logits.shape}")
                     else:
                         raise TypeError(f"Unsupported model type: {type(model)}")
                 
@@ -571,14 +555,8 @@ class EnsembleGraphClassifier(torch.nn.Module):
                     if isinstance(model, GATForGraphClassification):
                         logits = model(data.x, data.edge_index, data.batch, getattr(data, 'edge_attr', None))
                     elif isinstance(model, HANForGraphClassification):
-                        if not isinstance(data, HeteroData):
-                            data_list = Batch.to_data_list(data)
-                            data_list = convert_to_heterogeneous(data_list)
-                            heter_data = Batch.from_data_list(data_list)
-                        else:
-                            heter_data = data
-                        heter_data.to(data.x.device)
-                        logits = model(heter_data.x_dict, heter_data.edge_index_dict)
+                        heter_data = to_hetero_batch(data)
+                        logits = model(heter_data.x_dict, heter_data.edge_index_dict, batch=heter_data.batch)
                     elif isinstance(model, RGCNForGraphClassification):
                         # Generate edge_type if not present
                         if not hasattr(data, 'edge_type'):
@@ -609,14 +587,8 @@ class EnsembleGraphClassifier(torch.nn.Module):
                     if isinstance(model, GATForGraphClassification):
                         embed = model.get_embedding(data.x, data.edge_index, data.batch, getattr(data, 'edge_attr', None))
                     elif isinstance(model, HANForGraphClassification):
-                        if not isinstance(data, HeteroData):
-                            data_list = Batch.to_data_list(data)
-                            data_list = convert_to_heterogeneous(data_list)
-                            heter_data = Batch.from_data_list(data_list)
-                        else:
-                            heter_data = data
-                        heter_data.to(data.x.device)
-                        logits = model(heter_data.x_dict, heter_data.edge_index_dict)
+                        heter_data = to_hetero_batch(data)
+                        embed = model.get_embedding(heter_data.x_dict, heter_data.edge_index_dict, batch=heter_data.batch)
                     elif isinstance(model, RGCNForGraphClassification):
                         # Generate edge_type if not present
                         if not hasattr(data, 'edge_type'):

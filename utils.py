@@ -1,5 +1,5 @@
 import torch
-from torch_geometric.data import HeteroData, Data
+from torch_geometric.data import HeteroData, Data, Batch
 from typing import List, Union
 
 def convert_single_graph(homogeneous_graph: Data, source_node_idx: int = 0, add_source_self_loop: bool = True) -> HeteroData:
@@ -151,13 +151,14 @@ def get_edge_type(edge_index, source_indices=[0]):
             edge_type.append(1)
     return torch.tensor(edge_type)
 
-from torch_geometric.data import Batch
 def to_hetero_batch(batch, add_source_self_loop=True):
+    device = batch.x.device
     data_list = batch.to_data_list()
     data_list = convert_to_heterogeneous(data_list, 0, add_source_self_loop)
-    for data in data_list:
-        print(data)
-    
     batch = Batch.from_data_list(data_list)
-    
+    batch.batch = {
+        'source': batch['source'].batch,
+        'user': batch['user'].batch
+    }
+    batch.to(device)
     return batch
