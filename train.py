@@ -121,14 +121,14 @@ def load_data(args):
             test_dataset = convert_to_heterogeneous(test_dataset, add_source_self_loop=args.use_self_loops)
             
             # Create dataloaders for heterogeneous graphs
-            train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
-            val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False)
-            test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
-        else:
-            # Create dataloaders for homogeneous graphs
             train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
             val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
             test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
+        else:
+            # Create dataloaders for homogeneous graphs
+            train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+            val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False)
+            test_loader = DataLoader(test_dataset, batch_size=256, shuffle=False)
         
         logger.info("Data loading and preprocessing completed")
         return train_loader, val_loader, test_loader, train_dataset

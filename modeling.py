@@ -644,3 +644,119 @@ class EnsembleGraphClassifier(torch.nn.Module):
             
             embed_dict[model.__class__.__name__] = embed
         return embed_dict
+    
+    @classmethod
+    def load_from_checkpoint(cls, folder_path, device=None):
+        """
+        Class method to load a trained ensemble model from a checkpoint folder.
+        
+        Args:
+            cls: The class itself (passed automatically)
+            folder_path (str): Path to the folder containing the model files
+            device (str, optional): Device to load the model on ('cpu', 'cuda', etc.)
+                                Default is None (auto-detect)
+        
+        Returns:
+            model: The loaded EnsembleGraphClassifier model ready for inference
+            config: Dictionary containing model configuration and training results
+        """
+        import os
+        import json
+        import torch
+
+        if device is None:
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        else:
+            device = torch.device(device)
+        
+        print(f"Using device: {device}")
+        
+        # Define paths for model file and results file
+        model_path = os.path.join(folder_path, "best_model.pt")
+        results_file = os.path.join(folder_path, "final_results.json")
+        
+        # Check if files exist
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model file not found: {model_path}")
+        
+        if not os.path.exists(results_file):
+            raise FileNotFoundError(f"Results file not found: {results_file}")
+        
+        # Load model configuration and results
+        with open(results_file, 'r') as f:
+            config = json.load(f)
+        
+        # Extract parameters for model creation
+        params = config["best_params"]
+        
+        # Get model hyperparameters
+        hidden_dim = params["hidden_dim"]
+        num_layers = params["num_layers"]
+        dropout = params["dropout"]
+        heads = params["heads"]
+        pooling = params["pooling"]
+        ensemble_method = params["ensemble_method"]
+        
+        # BERT feature dimension
+        in_channels = 768
+        
+        # Create the ensemble model with the appropriate submodels
+        print(f"Creating model with parameters: {params}")
+        model = cls(
+            models=[
+                GATForGraphClassification(
+                    in_channels=in_channels,
+                    hidden_channels=hidden_dim,
+                    num_classes=2,
+                    num_layers=num_layers,
+                    dropout=dropout,
+                    pooling=pooling,
+                    heads=heads,
+                    v2=False,
+                    concat=True
+                ),
+                HANForGraphClassification(
+                    in_channels=in_channels,
+                    hidden_channels=hidden_dim,
+                    out_channels=hidden_dim,
+                    num_classes=2,
+                    heads=heads,
+                    metadata=(['source', 'user'], [('source', 'to', 'user'), ('user', 'to', 'user'), ('source', 'to', 'source')]),
+                    dropout=dropout,
+                    num_layers=num_layers
+                ),
+                RGCNForGraphClassification(
+                    in_channels=in_channels,
+                    hidden_channels=hidden_dim,
+                    num_classes=2,
+                    num_relations=2,
+                    num_bases=None,
+                    num_layers=num_layers,
+                    dropout=dropout,
+                    pooling=pooling
+                )
+            ],
+            ensemble_method=ensemble_method,
+            num_classes=2,
+            hidden_dim=hidden_dim,
+            dropout=dropout
+        )
+        
+        # Load the checkpoint
+        checkpoint = torch.load(model_path, map_location=device)
+        
+        # Extract state dict
+        if 'model_state_dict' in checkpoint:
+            state_dict = checkpoint['model_state_dict']
+        else:
+            state_dict = checkpoint
+        
+        # Load the state dictionary with strict=False to handle missing keys
+        model.load_state_dict(state_dict, strict=False)
+        
+        # Move model to device and set to evaluation mode
+        model = model.to(device)
+        model.eval()
+        
+        print(f"Model loaded with test accuracy: {config.get('test_accuracy', 'N/A')}")
+        return model, config
