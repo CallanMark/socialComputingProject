@@ -29,39 +29,78 @@ def load_model():
 def load_dataset():
     return UPFD(root=dataset_dir, name=dataset_name, split="test", feature="bert")
 
-# === Plot Graph with Attention Heatmap ===
 def plot_graph_attention(graph, attentions, title, save_path=None):
-    G = to_networkx(graph, to_undirected=True)
-    edge_list = list(G.edges())
+    G = to_networkx(graph, to_undirected=False)
+    degrees = dict(G.degree())
     
-    # Map attention values to edges
+    # Root node (news node with highest out-degree)
+    root_node = max(degrees, key=degrees.get)
+    
+    # Build position dictionary
+    pos = {}
+    pos[root_node] = (0.0, 1.0)  # root at top
+
+    layer1 = []  # users directly connected to news
+    layer2 = []  # users connected via other users
+
+    for node in G.nodes:
+        if node == root_node:
+            continue
+        if G.has_edge(root_node, node):
+            layer1.append(node)
+        else:
+            layer2.append(node)
+    
+    # Arrange first layer evenly
+    if layer1:
+        x_positions = np.linspace(-1.5, 1.5, len(layer1))
+        for i, node in enumerate(layer1):
+            pos[node] = (x_positions[i], 0.7)
+
+    # Arrange second layer evenly
+    if layer2:
+        x_positions2 = np.linspace(-2.0, 2.0, len(layer2))
+        for i, node in enumerate(layer2):
+            pos[node] = (x_positions2[i], 0.4)
+
+    # Edge colors
+    edge_list = list(G.edges())
     edge_colors = []
     for i, (u, v) in enumerate(edge_list):
         if i < len(attentions):
             edge_colors.append(attentions[i])
         else:
-            edge_colors.append(0.0)  # Some dummy attention if mismatch
+            edge_colors.append(0.0)
+    edge_colors = np.array(edge_colors)
 
-    edge_colors = np.array(edge_colors)  # <-- Make sure it's a numpy array
-
-    plt.figure(figsize=(7, 6))
-    pos = nx.spring_layout(G, seed=42)
-
-    # Normalize correctly
+    cmap_used = plt.cm.plasma
     norm = plt.Normalize(vmin=np.min(edge_colors), vmax=np.max(edge_colors))
 
-    cmap_used = plt.cm.plasma  # <== Use this consistently
+    plt.figure(figsize=(10, 8))
 
-    edges = nx.draw_networkx_edges(
-        G, pos, 
-        edge_color=edge_colors, 
+    # Draw edges
+    nx.draw_networkx_edges(
+        G, pos,
+        edge_color=edge_colors,
         edge_cmap=cmap_used,
         edge_vmin=0.0,
         edge_vmax=1.0,
-        width=3,
+        width=2.5,
         alpha=0.9
     )
-    nodes = nx.draw_networkx_nodes(G, pos, node_color='skyblue', node_size=300)
+
+    # Draw nodes
+    node_colors = []
+    node_sizes = []
+    for node in G.nodes:
+        if node == root_node:
+            node_colors.append('gold')
+            node_sizes.append(1000)
+        else:
+            node_colors.append('skyblue')
+            node_sizes.append(400)
+
+    nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=node_sizes)
 
     plt.title(title)
     plt.colorbar(plt.cm.ScalarMappable(cmap=cmap_used, norm=norm), label="Attention Weight")
@@ -70,9 +109,11 @@ def plot_graph_attention(graph, attentions, title, save_path=None):
     if save_path:
         plt.savefig(save_path)
         plt.close()
-        print(f"Saved graph: {save_path}")
+        print(f"Saved tree graph: {save_path}")
     else:
         plt.show()
+
+
 
 
 # === Main Execution ===
