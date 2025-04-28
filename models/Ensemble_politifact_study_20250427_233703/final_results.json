@@ -1,0 +1,17 @@
+{
+  "best_params": {
+    "lr": 0.002092244700123591,
+    "weight_decay": 0.00034403195891452413,
+    "hidden_dim": 256,
+    "dropout": 0.646563203307456,
+    "ensemble_method": "transform",
+    "heads": 4,
+    "num_layers": 3,
+    "pooling": "mean",
+    "use_self_loops": true,
+    "batch_size": 64
+  },
+  "test_accuracy": 0.8597285067873304,
+  "val_accuracy": 0.9032258064516129,
+  "best_epoch": 71
+}
