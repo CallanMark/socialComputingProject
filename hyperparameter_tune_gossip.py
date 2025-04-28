@@ -171,14 +171,14 @@ def objective(trial, args, device, train_dataset):
     trial_params = {}
     
     # Common parameters (focused around the promising configuration)
-    trial_params['lr'] = trial.suggest_float('lr', 0.002, 0.004, log=True)
-    trial_params['weight_decay'] = trial.suggest_float('weight_decay', 0.00025, 0.00035, log=True)
+    trial_params['lr'] = trial.suggest_float('lr', 0.0005, 0.0015, log=True)
+    trial_params['weight_decay'] = trial.suggest_float('weight_decay', 0.00028, 0.00037, log=True)
     
     # Promising configuration from previous run uses hidden_dim=256
-    trial_params['hidden_dim'] = trial.suggest_categorical('hidden_dim', [256])
+    trial_params['hidden_dim'] = trial.suggest_categorical('hidden_dim', [128])
     
     # Focused dropout range around 0.59
-    trial_params['dropout'] = trial.suggest_float('dropout', 0.55, 0.65)
+    trial_params['dropout'] = trial.suggest_float('dropout', 0.5, 0.55)
     
     # Favor transform method based on best previous result but allow for exploration
     trial_params['ensemble_method'] = trial.suggest_categorical(
@@ -189,16 +189,16 @@ def objective(trial, args, device, train_dataset):
     trial_params['heads'] = trial.suggest_categorical('heads', [4])
     
     # Previous best used num_layers=2
-    trial_params['num_layers'] = trial.suggest_int('num_layers', 1, 3)
+    trial_params['num_layers'] = trial.suggest_int('num_layers', 1, 2)
     
     # Previous best used pooling='mean'
-    trial_params['pooling'] = trial.suggest_categorical('pooling', ['mean'])
+    trial_params['pooling'] = trial.suggest_categorical('pooling', ['max'])
     
     # Used true in best configuration
     trial_params['use_self_loops'] = trial.suggest_categorical('use_self_loops', [True])
     
     # Focus batch sizes around 64 (best previous value)
-    trial_params['batch_size'] = trial.suggest_categorical('batch_size', [64])
+    trial_params['batch_size'] = trial.suggest_categorical('batch_size', [64, 128])
     
     # Print current trial configuration
     config_str = f"\n{'='*80}\nTRIAL #{trial.number} CONFIGURATION:\n"

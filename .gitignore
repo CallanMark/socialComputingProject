@@ -180,3 +180,8 @@ cython_debug/
 /.conda
 .conda_envs_dir_test
 /runs
+/politifact
+/replication_gos
+/replication_pol
+/scripts/data
+/scripts/space
