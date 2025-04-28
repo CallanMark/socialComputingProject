@@ -1,0 +1,13 @@
+Evaluation Results for POLITIFACT
+==================================================
+
+Accuracy: 0.8597
+F1 Score: 0.8610
+AUC: 0.8874
+Precision: 0.8727
+Recall: 0.8496
+Specificity: 0.8704
+
+Confusion Matrix:
+[[94 14]
+ [17 96]]

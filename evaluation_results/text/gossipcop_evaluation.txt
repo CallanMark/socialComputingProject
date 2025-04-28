@@ -1,0 +1,13 @@
+Evaluation Results for GOSSIPCOP
+==================================================
+
+Accuracy: 0.9650
+F1 Score: 0.9657
+AUC: 0.9939
+Precision: 0.9482
+Recall: 0.9838
+Specificity: 0.9461
+
+Confusion Matrix:
+[[1807  103]
+ [  31 1885]]
