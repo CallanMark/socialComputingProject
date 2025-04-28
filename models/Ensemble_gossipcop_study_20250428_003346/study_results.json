@@ -1,0 +1,221 @@
+{
+  "best_params": {
+    "lr": 0.0012478031613554449,
+    "weight_decay": 0.00029707105695193524,
+    "hidden_dim": 128,
+    "dropout": 0.509091248360355,
+    "ensemble_method": "transform",
+    "heads": 4,
+    "num_layers": 1,
+    "pooling": "max",
+    "use_self_loops": true,
+    "batch_size": 128
+  },
+  "best_test_accuracy": 0.9681129116570831,
+  "best_val_accuracy": 0.9688644688644689,
+  "all_trials": [
+    {
+      "number": 0,
+      "params": {
+        "lr": 0.0007545205207016713,
+        "weight_decay": 0.0003649522132047798,
+        "hidden_dim": 128,
+        "dropout": 0.5365996970905703,
+        "ensemble_method": "transform",
+        "heads": 4,
+        "num_layers": 2,
+        "pooling": "max",
+        "use_self_loops": true,
+        "batch_size": 64
+      },
+      "test_accuracy": 0.9419759539989545,
+      "val_accuracy": 0.945054945054945,
+      "state": "COMPLETE"
+    },
+    {
+      "number": 1,
+      "params": {
+        "lr": 0.0005329456604111435,
+        "weight_decay": 0.00035645375213080616,
+        "hidden_dim": 128,
+        "dropout": 0.5300557505871605,
+        "ensemble_method": "transform",
+        "heads": 4,
+        "num_layers": 2,
+        "pooling": "max",
+        "use_self_loops": true,
+        "batch_size": 128
+      },
+      "test_accuracy": 0.8403031887088342,
+      "val_accuracy": 0.8644688644688645,
+      "state": "COMPLETE"
+    },
+    {
+      "number": 2,
+      "params": {
+        "lr": 0.0012478031613554449,
+        "weight_decay": 0.00029707105695193524,
+        "hidden_dim": 128,
+        "dropout": 0.509091248360355,
+        "ensemble_method": "transform",
+        "heads": 4,
+        "num_layers": 1,
+        "pooling": "max",
+        "use_self_loops": true,
+        "batch_size": 128
+      },
+      "test_accuracy": 0.9681129116570831,
+      "val_accuracy": 0.9688644688644689,
+      "state": "COMPLETE"
+    },
+    {
+      "number": 3,
+      "params": {
+        "lr": 0.00080363742531952,
+        "weight_decay": 0.0003036753088818589,
+        "hidden_dim": 128,
+        "dropout": 0.530592644736119,
+        "ensemble_method": "transform",
+        "heads": 4,
+        "num_layers": 1,
+        "pooling": "max",
+        "use_self_loops": true,
+        "batch_size": 128
+      },
+      "test_accuracy": 0.9657605854678516,
+      "val_accuracy": 0.9706959706959707,
+      "state": "COMPLETE"
+    },
+    {
+      "number": 4,
+      "params": {
+        "lr": 0.000825221790831329,
+        "weight_decay": 0.0003484966672077691,
+        "hidden_dim": 128,
+        "dropout": 0.509983689107918,
+        "ensemble_method": "transform",
+        "heads": 4,
+        "num_layers": 2,
+        "pooling": "max",
+        "use_self_loops": true,
+        "batch_size": 64
+      },
+      "test_accuracy": 0.8988499738630423,
+      "val_accuracy": 0.9084249084249084,
+      "state": "COMPLETE"
+    },
+    {
+      "number": 5,
+      "params": {
+        "lr": 0.0009746362638143953,
+        "weight_decay": 0.0002936289695156373,
+        "hidden_dim": 128,
+        "dropout": 0.503252579649264,
+        "ensemble_method": "transform",
+        "heads": 4,
+        "num_layers": 2,
+        "pooling": "max",
+        "use_self_loops": true,
+        "batch_size": 64
+      },
+      "test_accuracy": 0.9087820177731312,
+      "val_accuracy": 0.9175824175824175,
+      "state": "COMPLETE"
+    },
+    {
+      "number": 6,
+      "params": {
+        "lr": 0.0006987272938338321,
+        "weight_decay": 0.0002877270047412096,
+        "hidden_dim": 128,
+        "dropout": 0.5342116513256079,
+        "ensemble_method": "transform",
+        "heads": 4,
+        "num_layers": 1,
+        "pooling": "max",
+        "use_self_loops": true,
+        "batch_size": 128
+      },
+      "test_accuracy": 0.9498170412963931,
+      "val_accuracy": 0.9468864468864469,
+      "state": "COMPLETE"
+    },
+    {
+      "number": 7,
+      "params": {
+        "lr": 0.0005192511878128758,
+        "weight_decay": 0.00036076594143047983,
+        "hidden_dim": 128,
+        "dropout": 0.5129389990800008,
+        "ensemble_method": "transform",
+        "heads": 4,
+        "num_layers": 2,
+        "pooling": "max",
+        "use_self_loops": true,
+        "batch_size": 128
+      },
+      "test_accuracy": 0.8541557762676425,
+      "val_accuracy": 0.8663003663003663,
+      "state": "COMPLETE"
+    },
+    {
+      "number": 8,
+      "params": {
+        "lr": 0.0009116268308598025,
+        "weight_decay": 0.00029480408510584893,
+        "hidden_dim": 128,
+        "dropout": 0.548479231388228,
+        "ensemble_method": "transform",
+        "heads": 4,
+        "num_layers": 2,
+        "pooling": "max",
+        "use_self_loops": true,
+        "batch_size": 64
+      },
+      "test_accuracy": 0.8831677992681651,
+      "val_accuracy": 0.8937728937728938,
+      "state": "COMPLETE"
+    },
+    {
+      "number": 9,
+      "params": {
+        "lr": 0.0009643635620219836,
+        "weight_decay": 0.0003620304440448714,
+        "hidden_dim": 128,
+        "dropout": 0.504424625102596,
+        "ensemble_method": "transform",
+        "heads": 4,
+        "num_layers": 1,
+        "pooling": "max",
+        "use_self_loops": true,
+        "batch_size": 128
+      },
+      "test_accuracy": 0.9657605854678516,
+      "val_accuracy": 0.967032967032967,
+      "state": "COMPLETE"
+    }
+  ],
+  "args": {
+    "dataset": "gossipcop",
+    "n_trials": 10,
+    "study_name": "Ensemble_gossipcop_study",
+    "timeout": null,
+    "epochs": 120,
+    "patience": 25,
+    "device": "cuda:6",
+    "seed": 42,
+    "save_path": "../replication_gos",
+    "batch_size": 128,
+    "model_type": "Ensemble",
+    "lr": 0.0009643635620219836,
+    "weight_decay": 0.0003620304440448714,
+    "hidden_dim": 128,
+    "dropout": 0.504424625102596,
+    "ensemble_method": "transform",
+    "heads": 4,
+    "num_layers": 1,
+    "pooling": "max",
+    "use_self_loops": true,
+    "ensemble_models": "GAT,HAN,RGCN"
+  }
+}
