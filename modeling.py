@@ -233,7 +233,9 @@ class HANForGraphClassification(torch.nn.Module):
                  heads: int = 8, 
                  metadata: Optional[Tuple] = None, 
                  dropout: float = 0.6,
-                 num_layers: int = 1):
+                 lin_input_dim: Optional[int] = None,
+                 num_layers: int = 1,
+                 ):
         super().__init__()
         
         # Create the base HAN model for node embeddings
@@ -258,7 +260,9 @@ class HANForGraphClassification(torch.nn.Module):
         
         # Store the embedding dimension for ensemble methods
         self.output_dim = out_channels
-    
+
+        if lin_input_dim:
+            self.lin = torch.nn.Linear(hidden_channels, out_channels)
     def forward(self, x_dict, edge_index_dict, batch=None):
         """
         Forward pass for heterogeneous graph classification.
@@ -613,3 +617,30 @@ class EnsembleGraphClassifier(torch.nn.Module):
             combined = F.dropout(combined, p=self.dropout, training=self.training)
             logits = self.classifier(combined)
             return logits
+    
+    def get_embedding(self, data):
+        embed_dict = {}
+        for model in self.models:
+            if hasattr(model, 'get_embedding_data'):
+                # Use specialized data handling if available
+                embed = model.get_embedding_data(data)
+            else:
+                # Extract appropriate inputs based on model type
+                if isinstance(model, GATForGraphClassification):
+                    embed = model.get_embedding(data.x, data.edge_index, data.batch, getattr(data, 'edge_attr', None))
+                elif isinstance(model, HANForGraphClassification):
+                    heter_data = to_hetero_batch(data)
+                    embed = model.get_embedding(heter_data.x_dict, heter_data.edge_index_dict, batch=heter_data.batch)
+                elif isinstance(model, RGCNForGraphClassification):
+                    # Generate edge_type if not present
+                    if not hasattr(data, 'edge_type'):
+                        edge_type = get_edge_type(data.edge_index, 
+                                source_indices=data.ptr[:-1].tolist() if hasattr(data, 'ptr') else [0])
+                    else:
+                        edge_type = data.edge_type
+                    embed = model.get_embedding(data.x, data.edge_index, edge_type, data.batch)
+                else:
+                    raise TypeError(f"Unsupported model type: {type(model)}")
+            
+            embed_dict[model.__class__.__name__] = embed
+        return embed_dict
